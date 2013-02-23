@@ -9,18 +9,55 @@
 </body>
 <script>
 
+function greyscale_image(pixels) {
+	var data = pixels.data;
+	for(var p=0; p < data.length; p+=4) {
+		var g = (data[p] + data[p+1] + data[p+2])/3;
+		data[p] = data[p+1] = data[p+2] = g;
+	}
+}
 function threshold_pixel(data, p, threshold) {
-	var g = (data[p] + data[p+1] + data[p+2])/3
+	var g = (data[p] + data[p+1] + data[p+2])/3;
 	data[p] = data[p+1] = data[p+2] = g < threshold ? 0 : 255;
+}
+
+function threshold_image(pixels) {
+	var data = pixels.data;
+	for(var p=0; p < data.length; p+=4) {
+		threshold_pixel(data, p, 155);
+	}
+}
+
+function dither_image(pixels) {
+	greyscale_image(pixels);
+	var data = pixels.data;
+	for(var y=0; y < pixels.height; ++y) {
+		for(var x=0; x < pixels.width; ++x) {
+			var p = (y*pixels.width+x)*4;
+			var oldvalue = data[p];
+			threshold_pixel(data, p, 128);
+			var quant_error = oldvalue - data[p];
+
+			var ep = (y*pixels.width+x+1)*4;
+			data[ep] = data[ep] + 7.0/16*quant_error;
+
+			var ep = ((y+1)*pixels.width+x-1)*4;
+			data[ep] = data[ep] + 3.0/16*quant_error;
+
+			var ep = ((y+1)*pixels.width+x)*4;
+			data[ep] = data[ep] + 5.0/16*quant_error;
+
+			var ep = (y*pixels.width+x+1)*4;
+			data[ep] = data[ep] + 1.0/16*quant_error;
+		}
+	}
 }
 
 function filter_image(canvas) {
 	var cxt = canvas.getContext('2d');
 	var pixels = cxt.getImageData(0, 0, canvas.width, canvas.height);
 	var data = pixels.data;
-	for(var p=0; p < data.length; p+=4) {
-		threshold_pixel(data, p, 128)
-	}
+	dither_image(pixels);
 	cxt.putImageData(pixels, 0, 0);
 }
 
