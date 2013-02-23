@@ -1,0 +1,59 @@
+<!doctype html>
+<html>
+<head>
+	<title>Image balls</title>
+</head>
+<body>
+	<p><input id="upload" type="file"></p>
+	<div id="arena"></div>
+</body>
+<script>
+
+function threshold_pixel(data, p, threshold) {
+	var g = (data[p] + data[p+1] + data[p+2])/3
+	data[p] = data[p+1] = data[p+2] = g < threshold ? 0 : 255;
+}
+
+function filter_image(canvas) {
+	var cxt = canvas.getContext('2d');
+	var pixels = cxt.getImageData(0, 0, canvas.width, canvas.height);
+	var data = pixels.data;
+	for(var p=0; p < data.length; p+=4) {
+		threshold_pixel(data, p, 128)
+	}
+	cxt.putImageData(pixels, 0, 0);
+}
+
+function handle_image(e) {
+	if (this.files[0] && this.files[0].type.match('image/.*')) {
+		var image = this.files[0];
+		var reader = new FileReader();
+		var arena = document.getElementById('arena');
+		reader.onloadend = function(e) {
+			var img = new Image();
+			img.onload = function() {
+				var width = 384;
+				var height = img.height/img.width * width;
+				var canvas = document.createElement('canvas');
+				canvas.setAttribute('style', 'border: 1px solid red');
+				canvas.width = width;
+				canvas.height = height;
+				var cxt = canvas.getContext('2d');
+				cxt.drawImage(this, 0, 0, img.width, img.height, 0, 0, width, height);
+				if (arena.firstChild) {
+					arena.removeChild(arena.firstChild);
+				}
+				arena.appendChild(canvas);
+				filter_image(canvas);
+			}
+			img.src = e.target.result;
+		}
+		reader.readAsDataURL(image);
+	}
+}
+
+if (window.File && window.FileReader && window.FileList && window.Blob) {
+	document.getElementById('upload').addEventListener('change', handle_image, false);
+}
+</script>
+</html>
