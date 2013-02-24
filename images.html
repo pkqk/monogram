@@ -6,8 +6,11 @@
 	.hide {
 		display: none;
 	}
-	#threshold {
+	input[type=range] {
 		width: 300px;
+	}
+	label {
+		display: block;
 	}
 	</style>
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
@@ -15,7 +18,10 @@
 <body>
 	<p><input id="upload" type="file"></p>
 	<div id="arena"></div>
-	<input class="hide" id="threshold" type="range" min="0" max="254" value="128">
+	<div id="controls" class="hide">
+		<label><input id="bright-threshold" type="range" min="0" max="254" value="128"></label>
+		<label><input id="edge-threshold" type="range" min="0" max="254" value="128"></label>
+	</div>
 </body>
 <script>
 
@@ -34,16 +40,15 @@ function greyscale_image(image, context) {
 	return grey_image;
 }
 
-function threshold_pixel(data, p, threshold) {
-	var g = (data[p] + data[p+1] + data[p+2])/3;
-	data[p] = data[p+1] = data[p+2] = g < threshold ? 0 : 255;
-}
-
-function threshold_image(pixels, threshold) {
-	var data = pixels.data;
+function threshold_image(image, context, threshold) {
+	var black_image = context.createImageData(image);
+	var data = black_image.data;
 	for(var p=0; p < data.length; p+=4) {
-		threshold_pixel(data, p, threshold);
+		var g = 0.2*image.data[p] + 0.7*image.data[p+1] + 0.1*image.data[p+2];
+		data[p] = data[p+1] = data[p+2] = g < threshold ? 0 : 255;
+		data[p+3] = 255;
 	}
+	return black_image;
 }
 
 function error_diffusion_image(image, context, threshold) {
@@ -87,18 +92,65 @@ function dither_image(image, context, threshold) {
 	return new_image;
 }
 
-function threshold_value() {
-	return 255 - parseInt(document.getElementById('threshold').value);
+function combine_black(context, image1, image2) {
+	var image = context.createImageData(image1);
+	var data = image.data;
+	for(var p=0; p < data.length; p++) {
+		data[p] = data[p+1] = data[p+1] = (image1.data[p] == 0 || image2.data[p] == 0) ? 0 : 255;
+		data[p+3] = 255;
+	}
+	return image;
+}
+
+function convolute(kernel, image, new_image, x, y) {
+	var data = new_image.data;
+	var i = 0;
+	var c = 0
+	for(var dy=-1; dy < 2; dy++) {
+		for(var dx=-1; dx < 2; dx++) {
+			c += kernel[i] * image[((y+dy)*new_image.width+(x+dx))*4];
+			i++;
+		}
+	}
+	var p = (y*new_image.width+x)*4;
+	data[p] = data[p+1] = data[p+2] = 255 - c;
+}
+
+function sobel_image(image, context) {
+	var kernel_x = [
+		-1, 0, 1,
+		-2, 0, 2,
+		-1, 0, 1 
+	];
+	var kernel_y = [
+		-1, -2, -1,
+		0, 0,  0,
+		1, 2, 1
+	];
+	new_image = greyscale_image(image, context);
+	for(var y=0; y < new_image.height; ++y) {
+		for(var x=0; x < new_image.width; ++x) {
+			convolute(kernel_x, image.data, new_image, x, y);
+			convolute(kernel_y, image.data, new_image, x, y);
+		}
+	}
+	return new_image;
+}
+
+function threshold_value(control) {
+	return 255 - parseInt(document.getElementById(control).value);
 }
 
 function filter_image(orig_image, canvas) {
 	var cxt = canvas.getContext('2d');
-	var image_data = dither_image(orig_image, cxt, threshold_value());
+	var image1 = dither_image(orig_image, cxt, threshold_value('bright-threshold'));
+	var image2 = threshold_image(sobel_image(orig_image, cxt), cxt, threshold_value('edge-threshold'));
+	var image_data = combine_black(cxt, image1, image2);
 	cxt.putImageData(image_data, 0, 0);
 }
 
 function display_controls() {
-	document.getElementById('threshold').classList.remove('hide');
+	document.getElementById('controls').classList.remove('hide');
 }
 
 function get_image_data(canvas) {
@@ -139,7 +191,10 @@ function handle_image(e) {
 
 if (window.File && window.FileReader && window.FileList && window.Blob) {
 	document.getElementById('upload').addEventListener('change', handle_image, false);
-	document.getElementById('threshold').addEventListener('change', function() {
+	document.getElementById('bright-threshold').addEventListener('change', function() {
+		filter_image(orig_image, document.getElementById('image'));
+	}, false);
+	document.getElementById('edge-threshold').addEventListener('change', function() {
 		filter_image(orig_image, document.getElementById('image'));
 	}, false);
 }
