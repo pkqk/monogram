@@ -71,20 +71,16 @@ function dither_image(image, context, threshold) {
 			var p = (y*width+x)*4;
 			var oldvalue = data[p];
 			data[p] = data[p+1] = data[p+2] = (oldvalue < threshold ? 0 : 255);
-			data[p+3] = 255;
 
-			var quant_error = (oldvalue - data[p])/2;
+			var quant_error = (oldvalue - data[p])/2; //reduce error effect
 
 			var ep = (y*width+x+1)*4;
 			data[ep] = data[ep] + 7.0/16*quant_error;
-
-			var ep = ((y+1)*width+x-1)*4;
+			ep = ((y+1)*width+x-1)*4;
 			data[ep] = data[ep] + 3.0/16*quant_error;
-
-			var ep = ((y+1)*width+x)*4;
+			ep = ((y+1)*width+x)*4;
 			data[ep] = data[ep] + 5.0/16*quant_error;
-
-			var ep = (y*width+x+1)*4;
+			ep = (y*width+x+1)*4;
 			data[ep] = data[ep] + 1.0/16*quant_error;
 		}
 	}
