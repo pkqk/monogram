@@ -24,7 +24,8 @@ var orig_image;
 function greyscale_image(pixels) {
 	var data = pixels.data;
 	for(var p=0; p < data.length; p+=4) {
-		var g = (orig_image.data[p] + orig_image.data[p+1] + orig_image.data[p+2])/3;
+		// Fancy CIE luminance idea of greyscale
+		var g = 0.2126*image.data[p] + 0.7152*image.data[p+1] + 0.0722*image.data[p+2];
 		data[p] = data[p+1] = data[p+2] = g;
 	}
 }
