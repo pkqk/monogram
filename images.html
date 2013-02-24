@@ -7,9 +7,10 @@
 		display: none;
 	}
 	#threshold {
-		width: 384px;
+		width: 300px;
 	}
 	</style>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
 </head>
 <body>
 	<p><input id="upload" type="file"></p>
@@ -94,9 +95,10 @@ function handle_image(e) {
 		reader.onloadend = function(e) {
 			var img = new Image();
 			img.onload = function() {
-				var width = 384;
+				var width = 300;
 				var height = img.height/img.width * width;
 				var canvas = document.createElement('canvas');
+				canvas.setAttribute('id', 'image');
 				canvas.setAttribute('style', 'border: 1px solid red');
 				canvas.width = width;
 				canvas.height = height;
@@ -119,7 +121,7 @@ function handle_image(e) {
 if (window.File && window.FileReader && window.FileList && window.Blob) {
 	document.getElementById('upload').addEventListener('change', handle_image, false);
 	document.getElementById('threshold').addEventListener('change', function() {
-		filter_image(document.getElementsByTagName('canvas')[0]);
+		filter_image(document.getElementById('image'));
 	}, false);
 }
 </script>
