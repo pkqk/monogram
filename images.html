@@ -46,6 +46,22 @@ function threshold_image(pixels, threshold) {
 	}
 }
 
+function error_diffusion_image(image, context, threshold) {
+	new_image = greyscale_image(image, context);
+	var data = new_image.data;
+	for(var p=0; p < data.length; p+=4) {
+		// var g = (image.data[p] + image.data[p+1] + image.data[p+2])/3;
+		// Fancy CIE luminance idea of greyscale
+		var g = 0.2126*image.data[p] + 0.7152*image.data[p+1] + 0.0722*image.data[p+2];
+		var c = g < threshold ? 0 : 255;
+		var e = g - c;
+		data[p] = data[p+1] = data[p+2] = c;
+		data[p+4] = data[p+5] = data[p+6] = data[p+4] + e;
+		data[p+3] = 255;
+	}
+	return new_image;
+}
+
 function dither_image(image, context, threshold) {
 	new_image = greyscale_image(image, context);
 	var data = new_image.data;
