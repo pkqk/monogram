@@ -2,17 +2,28 @@
 <html>
 <head>
 	<title>Image balls</title>
+	<style>
+	.hide {
+		display: none;
+	}
+	#threshold {
+		width: 384px;
+	}
+	</style>
 </head>
 <body>
 	<p><input id="upload" type="file"></p>
 	<div id="arena"></div>
+	<input class="hide" id="threshold" type="range" min="0" max="255" value="128">
 </body>
 <script>
+
+var orig_image;
 
 function greyscale_image(pixels) {
 	var data = pixels.data;
 	for(var p=0; p < data.length; p+=4) {
-		var g = (data[p] + data[p+1] + data[p+2])/3;
+		var g = (orig_image.data[p] + orig_image.data[p+1] + orig_image.data[p+2])/3;
 		data[p] = data[p+1] = data[p+2] = g;
 	}
 }
@@ -21,10 +32,10 @@ function threshold_pixel(data, p, threshold) {
 	data[p] = data[p+1] = data[p+2] = g < threshold ? 0 : 255;
 }
 
-function threshold_image(pixels) {
+function threshold_image(pixels, threshold) {
 	var data = pixels.data;
 	for(var p=0; p < data.length; p+=4) {
-		threshold_pixel(data, p, 155);
+		threshold_pixel(data, p, threshold);
 	}
 }
 
@@ -35,7 +46,7 @@ function dither_image(pixels) {
 		for(var x=0; x < pixels.width; ++x) {
 			var p = (y*pixels.width+x)*4;
 			var oldvalue = data[p];
-			threshold_pixel(data, p, 128);
+			threshold_pixel(data, p, threshold_value());
 			var quant_error = oldvalue - data[p];
 
 			var ep = (y*pixels.width+x+1)*4;
@@ -53,12 +64,26 @@ function dither_image(pixels) {
 	}
 }
 
+function threshold_value() {
+	return 255 - parseInt(document.getElementById('threshold').value);
+}
+
 function filter_image(canvas) {
 	var cxt = canvas.getContext('2d');
 	var pixels = cxt.getImageData(0, 0, canvas.width, canvas.height);
 	var data = pixels.data;
 	dither_image(pixels);
+	// threshold_image(pixels, threshold_value());
 	cxt.putImageData(pixels, 0, 0);
+}
+
+function display_controls() {
+	document.getElementById('threshold').classList.remove('hide');
+}
+
+function save_image(canvas) {
+	var cxt = canvas.getContext('2d');
+	orig_image = cxt.getImageData(0, 0, canvas.width, canvas.height);
 }
 
 function handle_image(e) {
@@ -81,7 +106,9 @@ function handle_image(e) {
 					arena.removeChild(arena.firstChild);
 				}
 				arena.appendChild(canvas);
+				save_image(canvas);
 				filter_image(canvas);
+				display_controls()
 			}
 			img.src = e.target.result;
 		}
@@ -91,6 +118,9 @@ function handle_image(e) {
 
 if (window.File && window.FileReader && window.FileList && window.Blob) {
 	document.getElementById('upload').addEventListener('change', handle_image, false);
+	document.getElementById('threshold').addEventListener('change', function() {
+		filter_image(document.getElementsByTagName('canvas')[0]);
+	}, false);
 }
 </script>
 </html>
