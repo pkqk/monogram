@@ -21,14 +21,19 @@
 
 var orig_image;
 
-function greyscale_image(pixels) {
-	var data = pixels.data;
+function greyscale_image(image, context) {
+	var grey_image = context.createImageData(image);
+	var data = grey_image.data;
 	for(var p=0; p < data.length; p+=4) {
+		// var g = (image.data[p] + image.data[p+1] + image.data[p+2])/3;
 		// Fancy CIE luminance idea of greyscale
 		var g = 0.2126*image.data[p] + 0.7152*image.data[p+1] + 0.0722*image.data[p+2];
 		data[p] = data[p+1] = data[p+2] = g;
+		data[p+3] = 255;
 	}
+	return grey_image;
 }
+
 function threshold_pixel(data, p, threshold) {
 	var g = (data[p] + data[p+1] + data[p+2])/3;
 	data[p] = data[p+1] = data[p+2] = g < threshold ? 0 : 255;
@@ -41,51 +46,52 @@ function threshold_image(pixels, threshold) {
 	}
 }
 
-function dither_image(pixels) {
-	greyscale_image(pixels);
-	var data = pixels.data;
-	for(var y=0; y < pixels.height; ++y) {
-		for(var x=0; x < pixels.width; ++x) {
-			var p = (y*pixels.width+x)*4;
+function dither_image(image, context, threshold) {
+	new_image = greyscale_image(image, context);
+	var data = new_image.data;
+	var width = new_image.width, height = new_image.height;
+	for(var y=0; y < height; ++y) {
+		for(var x=0; x < width; ++x) {
+			var p = (y*width+x)*4;
 			var oldvalue = data[p];
-			threshold_pixel(data, p, threshold_value());
-			var quant_error = oldvalue - data[p];
+			data[p] = data[p+1] = data[p+2] = (oldvalue < threshold ? 0 : 255);
+			data[p+3] = 255;
 
-			var ep = (y*pixels.width+x+1)*4;
+			var quant_error = (oldvalue - data[p])/2;
+
+			var ep = (y*width+x+1)*4;
 			data[ep] = data[ep] + 7.0/16*quant_error;
 
-			var ep = ((y+1)*pixels.width+x-1)*4;
+			var ep = ((y+1)*width+x-1)*4;
 			data[ep] = data[ep] + 3.0/16*quant_error;
 
-			var ep = ((y+1)*pixels.width+x)*4;
+			var ep = ((y+1)*width+x)*4;
 			data[ep] = data[ep] + 5.0/16*quant_error;
 
-			var ep = (y*pixels.width+x+1)*4;
+			var ep = (y*width+x+1)*4;
 			data[ep] = data[ep] + 1.0/16*quant_error;
 		}
 	}
+	return new_image;
 }
 
 function threshold_value() {
 	return 255 - parseInt(document.getElementById('threshold').value);
 }
 
-function filter_image(canvas) {
+function filter_image(orig_image, canvas) {
 	var cxt = canvas.getContext('2d');
-	var pixels = cxt.getImageData(0, 0, canvas.width, canvas.height);
-	var data = pixels.data;
-	dither_image(pixels);
-	// threshold_image(pixels, threshold_value());
-	cxt.putImageData(pixels, 0, 0);
+	var image_data = dither_image(orig_image, cxt, threshold_value());
+	cxt.putImageData(image_data, 0, 0);
 }
 
 function display_controls() {
 	document.getElementById('threshold').classList.remove('hide');
 }
 
-function save_image(canvas) {
+function get_image_data(canvas) {
 	var cxt = canvas.getContext('2d');
-	orig_image = cxt.getImageData(0, 0, canvas.width, canvas.height);
+	return cxt.getImageData(0, 0, canvas.width, canvas.height);
 }
 
 function handle_image(e) {
@@ -109,8 +115,8 @@ function handle_image(e) {
 					arena.removeChild(arena.firstChild);
 				}
 				arena.appendChild(canvas);
-				save_image(canvas);
-				filter_image(canvas);
+				orig_image = get_image_data(canvas);
+				filter_image(orig_image, canvas);
 				display_controls()
 			}
 			img.src = e.target.result;
@@ -122,7 +128,7 @@ function handle_image(e) {
 if (window.File && window.FileReader && window.FileList && window.Blob) {
 	document.getElementById('upload').addEventListener('change', handle_image, false);
 	document.getElementById('threshold').addEventListener('change', function() {
-		filter_image(document.getElementById('image'));
+		filter_image(orig_image, document.getElementById('image'));
 	}, false);
 }
 </script>
