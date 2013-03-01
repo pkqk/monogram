@@ -9,6 +9,9 @@
 	input[type=range] {
 		width: 300px;
 	}
+    * {
+        -webkit-user-select: none;
+    }
 	label {
 		display: block;
 	}
@@ -20,7 +23,8 @@
 	<div id="arena"></div>
 	<div id="controls" class="hide">
 		<label><input id="bright-threshold" type="range" min="0" max="254" value="128"></label>
-		<label><input id="edge-threshold" type="range" min="0" max="254" value="128"></label>
+        <!--<label><input id="edge-threshold" type="range" min="0" max="254" value="128"></label>-->
+        <button id="send-image">Send to DeskBot</button>
 	</div>
 </body>
 <script>
@@ -144,8 +148,9 @@ function threshold_value(control) {
 function filter_image(orig_image, canvas) {
 	var cxt = canvas.getContext('2d');
 	var image1 = dither_image(orig_image, cxt, threshold_value('bright-threshold'));
-	var image2 = threshold_image(sobel_image(orig_image, cxt), cxt, threshold_value('edge-threshold'));
-	var image_data = combine_black(cxt, image1, image2);
+	//var image2 = threshold_image(sobel_image(orig_image, cxt), cxt, threshold_value('edge-threshold'));
+	//var image_data = combine_black(cxt, image1, image2);
+    var image_data = image1;
 	cxt.putImageData(image_data, 0, 0);
 }
 
@@ -189,14 +194,36 @@ function handle_image(e) {
 	}
 }
 
+function send_image(canvas) {
+    var deskbot_print_url = "http://staging.bergcloud.com/playground/direct_print/3R6WCQAZYTJT";
+    var form = new FormData();
+    var image = canvas.toDataURL('image/png');
+    form.append('html', '<img src="' + image + '">');
+    var req = new XMLHttpRequest();
+    req.onload = function() {
+        if (req.status == 200) {
+            alert('Sent');
+        } else {
+            alert('Error: '+req.status);
+        }
+    }
+    req.open("POST", deskbot_print_url);
+    req.send(form);
+}
+
 if (window.File && window.FileReader && window.FileList && window.Blob) {
 	document.getElementById('upload').addEventListener('change', handle_image, false);
 	document.getElementById('bright-threshold').addEventListener('change', function() {
 		filter_image(orig_image, document.getElementById('image'));
 	}, false);
-	document.getElementById('edge-threshold').addEventListener('change', function() {
+	document.getElementById('send-image').addEventListener('click', function() {
+		send_image(document.getElementById('image'));
+	}, false);
+    /*
+    document.getElementById('edge-threshold').addEventListener('change', function() {
 		filter_image(orig_image, document.getElementById('image'));
 	}, false);
+    */
 }
 </script>
 </html>
