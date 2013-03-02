@@ -15,6 +15,11 @@
 	label {
 		display: block;
 	}
+    #placeholder {
+        border: 4px dashed #ccc;
+        width: 292px;
+        height: 200px;
+    }
 	</style>
     <script src="/jquery-1.7.2.min.js"></script>
     <script src="/jquery.exif.js"></script>
@@ -23,7 +28,7 @@
 </head>
 <body>
 	<p><input id="upload" type="file"></p>
-	<div id="arena"></div>
+    <div id="arena"><div id="placeholder"></div></div>
 	<div id="controls" class="hide">
 		<label><input id="bright-threshold" type="range" min="0" max="254" value="128"></label>
         <label>
@@ -219,7 +224,7 @@ function handle_image(e) {
                     var height = img.height/img.width * width;
                     var canvas = document.createElement('canvas');
                     canvas.setAttribute('id', 'image');
-                    canvas.setAttribute('style', 'border: 1px solid red');
+                    canvas.setAttribute('style', 'border: 1px dashed #ccc');
                     canvas.width = width;
                     canvas.height = height;
                     var cxt = canvas.getContext('2d');
