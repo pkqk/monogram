@@ -31,6 +31,7 @@
                 <option selected value="dither_image">Floyd-Steinberg</option>
                 <option value="threshold_image">Threshold</option>
                 <option value="edge_threshold_image">Sobel + Threshold</option>
+                <option value="bayer_image">Bayer</option>
             </select>
         </label>
         <p><button id="send-image">Send to DeskBot</button></p>
@@ -66,7 +67,7 @@ function threshold_image(image, context, threshold) {
 }
 
 function error_diffusion_image(image, context, threshold) {
-	new_image = greyscale_image(image, context);
+	var new_image = greyscale_image(image, context);
 	var data = new_image.data;
 	for(var p=0; p < data.length; p+=4) {
 		// var g = (image.data[p] + image.data[p+1] + image.data[p+2])/3;
@@ -81,8 +82,28 @@ function error_diffusion_image(image, context, threshold) {
 	return new_image;
 }
 
+function bayer_image(image, context, threshold) {
+    var bayer_map = [
+        [ 1,  9,  3, 11],
+        [13,  5, 15,  7],
+        [ 4, 12,  2, 10],
+        [16,  8, 14,  6]
+    ];
+	var new_image = greyscale_image(image, context);
+	var data = new_image.data;
+	var width = new_image.width, height = new_image.height;
+	for(var y=0; y < height; ++y) {
+		for(var x=0; x < width; ++x) {
+			var p = (y*width+x)*4;
+			var oldvalue = data[p] + 5*bayer_map[x%4][y%4];
+			data[p] = data[p+1] = data[p+2] = (oldvalue < threshold ? 0 : 255);
+		}
+	}
+	return new_image;
+}
+
 function dither_image(image, context, threshold) {
-	new_image = greyscale_image(image, context);
+	var new_image = greyscale_image(image, context);
 	var data = new_image.data;
 	var width = new_image.width, height = new_image.height;
 	for(var y=0; y < height; ++y) {
