@@ -52,7 +52,7 @@
 <script>
 
 var orig_image;
-var current_threshold = undefined;
+var current_threshold = 0;
 
 function greyscale_image(image, context) {
 	var grey_image = context.createImageData(image);
@@ -190,7 +190,7 @@ function threshold_value(control) {
 
 function edge_threshold_image(orig_image, cxt, threshold) {
 	var image1 = dither_image(orig_image, cxt, threshold);
-	var image2 = threshold_image(sobel_image(orig_image, cxt), cxt, threshold);
+	var image2 = threshold_image(sobel_image(orig_image, cxt), cxt, 200);
 	return combine_black(cxt, image1, image2);
 }
 
@@ -201,7 +201,8 @@ function filter_image_with_chosen_filter(orig_image, cxt, threshold) {
 
 function filter_image(orig_image, canvas) {
     var threshold = threshold_value('bright-threshold');
-    if (threshold != current_threshold) {
+    var diff = Math.abs(current_threshold - threshold);
+    if (diff > 5) {
         var cxt = canvas.getContext('2d');
         var image_data = filter_image_with_chosen_filter(orig_image, cxt, threshold);
         cxt.putImageData(image_data, 0, 0);
@@ -269,7 +270,7 @@ function send_image(canvas) {
 if (window.File && window.FileReader && window.FileList && window.Blob) {
     $('#upload').change(handle_image);
     $('#filter').change(function(e) {
-        current_threshold = undefined;
+        current_threshold = 0;
         filter_image(orig_image, $('#image').get(0));
     });
     $('#bright-threshold').on('change', function() {
