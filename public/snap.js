@@ -54,8 +54,31 @@ function bayer_image(image, context, threshold) {
 	for(var y=0; y < height; ++y) {
 		for(var x=0; x < width; ++x) {
 			var p = (y*width+x)*4;
-			var oldvalue = data[p] + bayer_map[x%4][y%4];
-			data[p] = data[p+1] = data[p+2] = (oldvalue/2 < threshold ? 0 : 255);
+			var oldvalue = (data[p] + bayer_map[x%4][y%4]) >> 1;
+			data[p] = data[p+1] = data[p+2] = (oldvalue < threshold ? 0 : 255);
+		}
+	}
+	return new_image;
+}
+
+function atkinson_image(image, context, threshold) {
+	var new_image = greyscale_image(image, context);
+	var data = new_image.data;
+	var width = new_image.width, height = new_image.height;
+  var err_map = [[1,0], [2,0], [-1,1], [0,1], [1,1], [0,2]];
+	for(var y=0; y < height; ++y) {
+		for(var x=0; x < width; ++x) {
+			var p = (y*width+x)*4;
+			var oldvalue = data[p];
+      var newvalue = oldvalue < threshold ? 0 : 255;
+      data[p] = data[p+1] = data[p+2] = newvalue;
+      /* x >> 3 is divide by 8 */
+      var err = (oldvalue - newvalue) >> 3;
+      for(var i=0; i < err_map.length; ++i) {
+        var ax = err_map[i][0], ay = err_map[i][1];
+        p = ((y+ay)*width+x+ax)*4;
+        data[p] = data[p+1] = data[p+2] = data[p] + err;
+      }
 		}
 	}
 	return new_image;
